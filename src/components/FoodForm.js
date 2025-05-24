@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-export default function FoodForm({ onFoodAdded, restaurantId, food }) {
+export default function FoodForm({ onFoodAdded, restaurantId, food, onFormClose }) {
   const [formData, setFormData] = useState(
     food || {
       name: '',
@@ -31,6 +31,7 @@ export default function FoodForm({ onFoodAdded, restaurantId, food }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: food.id, ...data }),
         });
+        onFormClose(); // Close the form after update
       } else {
         // Create new food item
         await fetch('/api/foods', {
@@ -38,18 +39,18 @@ export default function FoodForm({ onFoodAdded, restaurantId, food }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
+        setFormData({
+          name: '',
+          ingredients: '',
+          calories: '',
+          protein: '',
+          carbs: '',
+          fat: '',
+          vitamins: '',
+          allergens: '',
+        });
       }
-      setFormData({
-        name: '',
-        ingredients: '',
-        calories: '',
-        protein: '',
-        carbs: '',
-        fat: '',
-        vitamins: '',
-        allergens: '',
-      });
-      onFoodAdded();
+      onFoodAdded(); // Refresh the food list
     } catch (error) {
       console.error('Error submitting form:', error);
     }
