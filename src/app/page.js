@@ -1,95 +1,98 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+
+import { useState, useEffect } from 'react';
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import FoodForm from '@/components/FoodForm';
+import FoodItem from '@/components/FoodItem';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.js</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [user, setUser] = useState(null);
+  const [foods, setFoods] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  const auth = getAuth();
+  const provider = new GoogleAuthProvider();
+
+  // Monitor auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+      if (currentUser) {
+        fetchFoods(currentUser.uid);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch food items for the logged-in restaurant
+  const fetchFoods = async (uid) => {
+    try {
+      const q = query(collection(db, 'foods'), where('restaurantId', '==', uid));
+      const querySnapshot = await getDocs(q);
+      const foodList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setFoods(foodList);
+    } catch (error) {
+      console.error('Error fetching foods:', error);
+    }
+  };
+
+  // Handle Google login
+  const handleLogin = async () => {
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error('Login error:', error);
+    }
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setFoods([]);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  // Handle food creation or update
+  const handleFoodUpdate = () => {
+    if (user) {
+      fetchFoods(user.uid);
+    }
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <div className="container">
+      <h1>Restaurant Food Management</h1>
+      {user ? (
+        <>
+          <div className="header">
+            <span>Welcome, {user.displayName}</span>
+            <button onClick={handleLogout} className="button">Logout</button>
+          </div>
+          <FoodForm onFoodAdded={handleFoodUpdate} restaurantId={user.uid} />
+          <div className="food-list">
+            <h2>Your Menu</h2>
+            {foods.length === 0 ? (
+              <p>No food items yet. Add some!</p>
+            ) : (
+              foods.map(food => (
+                <FoodItem key={food.id} food={food} onUpdate={handleFoodUpdate} restaurantId={user.uid} />
+              ))
+            )}
+          </div>
+        </>
+      ) : (
+        <button onClick={handleLogin} className="button">Sign in with Google</button>
+      )}
     </div>
   );
 }
