@@ -25,7 +25,7 @@ export default function Home() {
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [auth]);
 
   // Fetch food items for the logged-in restaurant
   const fetchFoods = async (uid) => {
