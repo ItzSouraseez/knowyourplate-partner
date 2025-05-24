@@ -19,10 +19,20 @@ export default function FoodItem({ food, onUpdate, restaurantId }) {
     }
   };
 
+  // Callback to close the form after update
+  const handleFormClose = () => {
+    setIsEditing(false);
+  };
+
   return (
     <div className="food-item">
       {isEditing ? (
-        <FoodForm food={food} onFoodAdded={onUpdate} restaurantId={restaurantId} />
+        <FoodForm 
+          food={food} 
+          onFoodAdded={onUpdate} 
+          restaurantId={restaurantId} 
+          onFormClose={handleFormClose} // Pass callback to close form
+        />
       ) : (
         <>
           <h3>{food.name}</h3>
