@@ -7,7 +7,11 @@ export async function POST(request) {
   try {
     const body = await request.json();
     console.log('POST body:', body);
-    const docRef = await addDoc(collection(db, 'foods'), body);
+    const { restaurantId, sectionId, ...foodData } = body;
+    const docRef = await addDoc(
+      collection(db, 'restaurants', restaurantId, 'sections', sectionId, 'foodItems'),
+      foodData
+    );
     return NextResponse.json({ id: docRef.id }, { status: 200 });
   } catch (error) {
     console.error('POST error:', error);
@@ -20,8 +24,11 @@ export async function PUT(request) {
   try {
     const body = await request.json();
     console.log('PUT body:', body);
-    const { id, ...data } = body;
-    await updateDoc(doc(db, 'foods', id), data);
+    const { id, restaurantId, sectionId, ...foodData } = body;
+    await updateDoc(
+      doc(db, 'restaurants', restaurantId, 'sections', sectionId, 'foodItems', id),
+      foodData
+    );
     return NextResponse.json({ message: 'Food item updated' }, { status: 200 });
   } catch (error) {
     console.error('PUT error:', error);
@@ -34,8 +41,10 @@ export async function DELETE(request) {
   try {
     const body = await request.json();
     console.log('DELETE body:', body);
-    const { id } = body;
-    await deleteDoc(doc(db, 'foods', id));
+    const { id, restaurantId, sectionId } = body;
+    await deleteDoc(
+      doc(db, 'restaurants', restaurantId, 'sections', sectionId, 'foodItems', id)
+    );
     return NextResponse.json({ message: 'Food item deleted' }, { status: 200 });
   } catch (error) {
     console.error('DELETE error:', error);

@@ -21,6 +21,13 @@ body {
   margin-top: 20px;
 }
 
+.food-list h3 {
+  color: #333;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 5px;
+  margin-top: 20px;
+}
+
 .food-item {
   background: white;
   padding: 15px;
@@ -43,7 +50,8 @@ body {
 }
 
 .food-form input,
-.food-form textarea {
+.food-form textarea,
+.food-form select {
   width: 100%;
   padding: 8px;
   margin-top: 5px;
@@ -53,6 +61,11 @@ body {
 
 .food-form textarea {
   height: 100px;
+}
+
+.food-form .error {
+  color: #dc3545;
+  margin-bottom: 10px;
 }
 
 .button {

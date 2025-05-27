@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QR Menu - Customer Order</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+  <!-- Header -->
+  <header class="bg-white shadow p-4">
+    <h1 class="text-xl font-bold text-center text-blue-600">Welcome to QR Menu</h1>
+  </header>
+
+  <!-- Menu Section -->
+  <main class="max-w-4xl mx-auto p-4">
+    <h2 class="text-2xl font-semibold mb-4">Menu</h2>
+    <!-- Filter Section -->
+    <div class="mb-6 bg-white p-4 rounded shadow">
+      <h3 class="text-lg font-semibold mb-2">Filter Menu</h3>
+      <!-- Calorie Filter -->
+      <div class="mb-4">
+        <label class="block mb-2">Calorie Range: <span id="calorie-display">0 - 1000 kcal</span></label>
+        <div class="flex space-x-4">
+          <input type="range" id="calorie-min" min="0" max="1000" value="0" class="w-full" aria-label="Select minimum calories"/>
+          <input type="range" id="calorie-max" min="0" max="1000" value="1000" class="w-full" aria-label="Select maximum calories"/>
+        </div>
+      </div>
+      <!-- Price Filter -->
+      <div class="mb-4">
+        <label class="block mb-2">Price Range: ₹<span id="price-display">0 - 300</span></label>
+        <div class="flex space-x-4">
+          <input type="range" id="price-min" min="0" max="300" value="0" class="w-full" aria-label="Select minimum price"/>
+          <input type="range" id="price-max" min="0" max="300" value="300" class="w-full" aria-label="Select maximum price"/>
+        </div>
+      </div>
+      <!-- Veg/Non-Veg Filter -->
+      <div>
+        <label for="type-filter" class="block mb-2">Dietary Preference</label>
+        <select id="type-filter" class="w-full p-2 border rounded" aria-label="Select dietary preference">
+          <option value="all">All</option>
+          <option value="veg">Vegetarian</option>
+          <option value="non-veg">Non-Vegetarian</option>
+        </select>
+      </div>
+    </div>
+    <div id="menu" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+
+    <!-- Cart Section -->
+    <h2 class="text-2xl font-semibold mt-10 mb-4">Your Cart</h2>
+    <div id="cart" class="bg-white p-4 rounded shadow">
+      <ul id="cart-items" class="mb-4"></ul>
+      <p class="font-bold">Total: ₹<span id="total">0</span></p>
+      <button id="place-order-btn" onclick="placeOrder()" class="mt-4 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Place Order</button>
+    </div>
+  </main>
+
+  <!-- JavaScript -->
+  <script>
+    const menuItems = [
+      {
+        id: 1,
+        name: "Paneer Butter Masala",
+        price: 180,
+        calories: 600,
+        type: "veg",
+        img: "https://images.unsplash.com/photo-1631451095765-2c8b6f423d12?q=80&w=1000&auto=format&fit=crop"
+      },
+      {
+        id: 2,
+        name: "Chicken Biryani",
+        price: 220,
+        calories: 800,
+        type: "non-veg",
+        img: "https://images.unsplash.com/photo-1631297833523-4ef9f4c4a8a0?q=80&w=1000&auto=format&fit=crop"
+      },
+      {
+        id: 3,
+        name: "Masala Dosa",
+        price: 100,
+        calories: 300,
+        type: "veg",
+        img: "https://images.unsplash.com/photo-1619647373466-f2a66f53dd33?q=80&w=1000&auto=format&fit=crop"
+      },
+      {
+        id: 4,
+        name: "Mango Lassi",
+        price: 60,
+        calories: 200,
+        type: "veg",
+        img: "https://images.unsplash.com/photo-1594005337778-b9ae31cd3f8f?q=80&w=1000&auto=format&fit=crop"
+      }
+    ];
+
+    let cart = [];
+
+    function loadCart() {
+      const savedCart = localStorage.getItem("cart");
+      if (savedCart) {
+        cart = JSON.parse(savedCart);
+        renderCart();
+      }
+    }
+
+    function renderMenu(filters = { minCalories: 0, maxCalories: 1000, minPrice: 0, maxPrice: 300, type: "all" }) {
+      const menuDiv = document.getElementById("menu");
+      menuDiv.innerHTML = "";
+      const filteredItems = menuItems.filter(item => 
+        item.calories >= filters.minCalories &&
+        item.calories <= filters.maxCalories &&
+        item.price >= filters.minPrice &&
+        item.price <= filters.maxPrice &&
+        (filters.type === "all" || item.type === filters.type)
+      );
+      if (filteredItems.length === 0) {
+        menuDiv.innerHTML = '<p class="text-gray-600">No items match the selected filters.</p>';
+        return;
+      }
+      filteredItems.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "bg-white p-4 rounded shadow hover:shadow-lg transition-shadow duration-200";
+        card.innerHTML = `
+          <img src="${item.img}" alt="Dish of ${item.name}" class="w-full h-40 object-cover rounded mb-2" onerror="this.src='https://via.placeholder.com/150'"/>
+          <h3 class="text-lg font-semibold">${item.name}</h3>
+          <p class="text-gray-600 mb-2">₹${item.price} | ${item.calories} kcal | ${item.type === "veg" ? "Vegetarian" : "Non-Vegetarian"}</p>
+          <button onclick="addToCart(${item.id})" aria-label="Add ${item.name} to cart" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">Add to Cart</button>
+        `;
+        menuDiv.appendChild(card);
+      });
+    }
+
+    function addToCart(itemId) {
+      const item = menuItems.find(i => i.id === itemId);
+      const cartItem = cart.find(i => i.id === itemId);
+      if (cartItem) {
+        cartItem.quantity += 1;
+      } else {
+        cart.push({ ...item, quantity: 1 });
+      }
+      localStorage.setItem("cart", JSON.stringify(cart));
+      renderCart();
+    }
+
+    function renderCart() {
+      const cartList = document.getElementById("cart-items");
+      const totalSpan = document.getElementById("total");
+      cartList.innerHTML = "";
+      let total = 0;
+      cart.forEach((item, index) => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        const li = document.createElement("li");
+        li.className = "flex justify-between border-b py-1 items-center";
+        li.innerHTML = `
+          <div class="flex items-center">
+            <button onclick="removeFromCart(${index})" aria-label="Remove ${item.name} from cart" class="text-red-500 text-sm mr-2">Remove</button>
+            <span>${item.name} (x${item.quantity}) - ₹${itemTotal}</span>
+          </div>
+          <div>
+            <button onclick="updateQuantity(${index}, -1)" aria-label="Decrease quantity of ${item.name}" class="text-blue-500 text-sm">-</button>
+            <span class="mx-2">${item.quantity}</span>
+            <button onclick="updateQuantity(${index}, 1)" aria-label="Increase quantity of ${item.name}" class="text-blue-500 text-sm">+</button>
+          </div>
+        `;
+        cartList.appendChild(li);
+      });
+      totalSpan.textContent = total;
+      localStorage.setItem("cart", JSON.stringify(cart));
+    }
+
+    function updateQuantity(index, change) {
+      cart[index].quantity += change;
+      if (cart[index].quantity <= 0) {
+        cart.splice(index, 1);
+      }
+      renderCart();
+    }
+
+    function removeFromCart(index) {
+      cart.splice(index, 1);
+      localStorage.setItem("cart", JSON.stringify(cart));
+      renderCart();
+    }
+
+    function placeOrder() {
+      if (cart.length === 0) {
+        alert("Your cart is empty!");
+        return;
+      }
+      const button = document.getElementById("place-order-btn");
+      button.disabled = true;
+      button.textContent = "Placing Order...";
+      setTimeout(() => {
+        alert("✅ Order placed successfully!");
+        cart.length = 0;
+        localStorage.removeItem("cart");
+        renderCart();
+        button.disabled = false;
+        button.textContent = "Place Order";
+      }, 1000);
+    }
+
+    // Filter Event Listeners
+    function updateFilters() {
+      const minCalories = parseInt(document.getElementById("calorie-min").value);
+      const maxCalories = parseInt(document.getElementById("calorie-max").value);
+      const minPrice = parseInt(document.getElementById("price-min").value);
+      const maxPrice = parseInt(document.getElementById("price-max").value);
+      const type = document.getElementById("type-filter").value;
+
+      // Ensure min is not greater than max
+      const validMinCalories = Math.min(minCalories, maxCalories);
+      const validMaxCalories = Math.max(minCalories, maxCalories);
+      const validMinPrice = Math.min(minPrice, maxPrice);
+      const validMaxPrice = Math.max(minPrice, maxPrice);
+
+      document.getElementById("calorie-display").textContent = ${validMinCalories} - ${validMaxCalories} kcal;
+      document.getElementById("price-display").textContent = ${validMinPrice} - ${validMaxPrice};
+      
+      renderMenu({
+        minCalories: validMinCalories,
+        maxCalories: validMaxCalories,
+        minPrice: validMinPrice,
+        maxPrice: validMaxPrice,
+        type: type
+      });
+    }
+
+    document.getElementById("calorie-min").addEventListener("input", updateFilters);
+    document.getElementById("calorie-max").addEventListener("input", updateFilters);
+    document.getElementById("price-min").addEventListener("input", updateFilters);
+    document.getElementById("price-max").addEventListener("input", updateFilters);
+    document.getElementById("type-filter").addEventListener("change", updateFilters);
+
+    // Initial render
+    loadCart();
+    renderMenu();
+  </script>
+</body>
+</html>
