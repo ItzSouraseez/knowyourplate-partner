@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import FoodForm from '@/components/FoodForm';
 import FoodItem from '@/components/FoodItem';
@@ -12,6 +12,8 @@ export default function Home() {
   const [sections, setSections] = useState([]);
   const [foods, setFoods] = useState({});
   const [loading, setLoading] = useState(true);
+  const [collapsedSections, setCollapsedSections] = useState({});
+  const contentRefs = useRef({}); // Store refs for section content
 
   const auth = getAuth();
   const provider = new GoogleAuthProvider();
@@ -35,11 +37,13 @@ export default function Home() {
       const sectionsSnapshot = await getDocs(collection(db, 'restaurants', uid, 'sections'));
       const sectionList = [];
       const foodMap = {};
+      const initialCollapsed = {};
 
       for (const sectionDoc of sectionsSnapshot.docs) {
-        const sectionId = sectionDoc.id; // Normalized ID (e.g., 'veg', 'non_veg')
-        const sectionName = sectionDoc.data().name; // Display name (e.g., 'Veg', 'Non Veg')
+        const sectionId = sectionDoc.id;
+        const sectionName = sectionDoc.data().name;
         sectionList.push(sectionName);
+        initialCollapsed[sectionName] = false; // Default: expanded
         console.log('Processing section:', sectionId, 'Name:', sectionName);
 
         const foodItemsSnapshot = await getDocs(
@@ -54,6 +58,7 @@ export default function Home() {
 
       setSections(sectionList);
       setFoods(foodMap);
+      setCollapsedSections(initialCollapsed);
       console.log('Sections:', sectionList);
       console.log('Foods:', foodMap);
     } catch (error) {
@@ -76,6 +81,7 @@ export default function Home() {
       await signOut(auth);
       setFoods({});
       setSections([]);
+      setCollapsedSections({});
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -86,6 +92,14 @@ export default function Home() {
     if (user) {
       fetchSectionsAndFoods(user.uid);
     }
+  };
+
+  // Toggle section collapse state
+  const toggleSection = (section) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
   if (loading) {
@@ -108,22 +122,44 @@ export default function Home() {
               <p>No sections or food items yet. Add some!</p>
             ) : (
               sections.map(section => (
-                <div key={section}>
-                  <h3>{section}</h3>
-                  {foods[section]?.length > 0 ? (
-                    foods[section].map(food => (
-                      <FoodItem 
-                        key={food.id} 
-                        food={food} 
-                        onUpdate={handleFoodUpdate} 
-                        restaurantId={user.uid} 
-                        sectionId={section.replace(/\s+/g, '_').toLowerCase()} // Normalize for API
-                        sections={sections}
-                      />
-                    ))
-                  ) : (
-                    <p>No items in {section} section.</p>
-                  )}
+                <div key={section} className="section">
+                  <h3 
+                    className="section-header" 
+                    onClick={() => toggleSection(section)}
+                    role="button"
+                    aria-expanded={!collapsedSections[section]}
+                    aria-controls={`section-${section}`}
+                  >
+                    <span className="toggle-icon">
+                      {collapsedSections[section] ? '▶' : '▼'}
+                    </span>
+                    {section}
+                  </h3>
+                  <div
+                    id={`section-${section}`}
+                    className={`section-content ${collapsedSections[section] ? 'collapsed' : ''}`}
+                    ref={el => (contentRefs.current[section] = el)}
+                    style={{
+                      height: collapsedSections[section]
+                        ? '0'
+                        : `${contentRefs.current[section]?.scrollHeight || 'auto'}px`
+                    }}
+                  >
+                    {foods[section]?.length > 0 ? (
+                      foods[section].map(food => (
+                        <FoodItem 
+                          key={food.id} 
+                          food={food} 
+                          onUpdate={handleFoodUpdate} 
+                          restaurantId={user.uid} 
+                          sectionId={section.replace(/\s+/g, '_').toLowerCase()}
+                          sections={sections}
+                        />
+                      ))
+                    ) : (
+                      <p>No items in {section} section.</p>
+                    )}
+                  </div>
                 </div>
               ))
             )}

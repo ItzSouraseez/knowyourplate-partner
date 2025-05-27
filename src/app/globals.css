@@ -21,11 +21,40 @@ body {
   margin-top: 20px;
 }
 
-.food-list h3 {
+.section {
+  margin-bottom: 15px;
+}
+
+.section-header {
   color: #333;
   border-bottom: 2px solid #007bff;
   padding-bottom: 5px;
-  margin-top: 20px;
+  margin: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.2s;
+}
+
+.section-header:hover {
+  background-color: #f0f0f0;
+}
+
+.toggle-icon {
+  margin-right: 8px;
+  font-size: 0.9em;
+}
+
+.section-content {
+  overflow: hidden;
+  transition: height 0.4s ease, opacity 0.4s ease;
+  opacity: 1;
+  will-change: height, opacity;
+}
+
+.section-content.collapsed {
+  height: 0 !important; /* Override inline height */
+  opacity: 0;
 }
 
 .food-item {
