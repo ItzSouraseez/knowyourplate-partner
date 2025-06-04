@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signO
 import FoodForm from '@/components/FoodForm';
 import FoodItem from '@/components/FoodItem';
 import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function Home() {
   const [user, setUser] = useState(null);
@@ -16,6 +16,8 @@ export default function Home() {
   const [editingSection, setEditingSection] = useState(null);
   const [newSectionName, setNewSectionName] = useState('');
   const [error, setError] = useState('');
+  const [restaurantName, setRestaurantName] = useState('');
+  const [newRestaurantName, setNewRestaurantName] = useState('');
   const contentRefs = useRef({});
 
   const auth = getAuth();
@@ -26,11 +28,42 @@ export default function Home() {
       setUser(currentUser);
       setLoading(false);
       if (currentUser) {
+        fetchRestaurantName(currentUser.uid);
         fetchSectionsAndFoods(currentUser.uid);
       }
     });
     return () => unsubscribe();
   }, []);
+
+  const fetchRestaurantName = async (uid) => {
+    try {
+      const restaurantDoc = await getDoc(doc(db, 'restaurants', uid));
+      if (restaurantDoc.exists()) {
+        setRestaurantName(restaurantDoc.data().restaurantName || '');
+        setNewRestaurantName(restaurantDoc.data().restaurantName || '');
+      }
+    } catch (error) {
+      console.error('Error fetching restaurant name:', error);
+      setError('Failed to load restaurant name.');
+    }
+  };
+
+  const saveRestaurantName = async () => {
+    if (!newRestaurantName.trim()) {
+      setError('Restaurant name cannot be blank.');
+      return;
+    }
+    try {
+      await setDoc(doc(db, 'restaurants', user.uid), {
+        restaurantName: newRestaurantName.trim()
+      }, { merge: true });
+      setRestaurantName(newRestaurantName.trim());
+      setError('');
+    } catch (error) {
+      console.error('Error saving restaurant name:', error);
+      setError('Failed to save restaurant name.');
+    }
+  };
 
   const fetchSectionsAndFoods = async (uid) => {
     try {
@@ -83,6 +116,8 @@ export default function Home() {
       setFoods({});
       setSections([]);
       setCollapsedSections({});
+      setRestaurantName('');
+      setNewRestaurantName('');
     } catch (error) {
       console.error('Logout error:', error);
       setError('Failed to sign out.');
@@ -180,6 +215,23 @@ export default function Home() {
           <div className="header">
             <span>Welcome, {user.displayName}</span>
             <button onClick={handleLogout} className="button">Logout</button>
+          </div>
+          <div className="restaurant-name-container">
+            <h2>Restaurant Name</h2>
+            <p>Current Name: {restaurantName || 'Not set'}</p>
+            <input
+              type="text"
+              value={newRestaurantName}
+              onChange={(e) => setNewRestaurantName(e.target.value)}
+              placeholder="Enter restaurant name"
+              className="restaurant-name-input"
+            />
+            <button
+              onClick={saveRestaurantName}
+              className="button"
+            >
+              Save Name
+            </button>
           </div>
           <FoodForm onFoodAdded={handleFoodUpdate} restaurantId={user.uid} sections={sections} />
           <div className="food-list">
